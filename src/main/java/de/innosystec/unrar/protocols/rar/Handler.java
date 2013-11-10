@@ -9,7 +9,7 @@ import java.net.URLConnection;
 import java.net.URLStreamHandler;
 
 /**
- * @author Luca Santarelli hrk@users.sourceforge.net
+ * @author Luca Santarelli luca.santarelli@gmail.com
  */
 public class Handler extends URLStreamHandler {
 	@Override
