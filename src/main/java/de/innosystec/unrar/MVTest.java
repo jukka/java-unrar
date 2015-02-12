@@ -32,6 +32,12 @@ public class MVTest {
 			while(fh!=null){	
 				try {
 					File out = new File("/home/Avenger/testdata/"+fh.getFileNameString().trim());
+					//to prevent bugs with subfolders
+			                File folderout = new File(out.getParent());
+			                if(folderout.isDirectory() && !folderout.exists()) {
+			                    folderout.mkdirs();
+			                }
+			                //!
 					System.out.println(out.getAbsolutePath());
 					FileOutputStream os = new FileOutputStream(out);
 					a.extractFile(fh, os);
