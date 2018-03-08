@@ -105,8 +105,8 @@ public class Archive implements Closeable {
      */
     public Archive(File file, UnrarCallback unrarCallback) throws RarException,
 	    IOException {
+        this.unrarCallback = unrarCallback;
 	setFile(file);
-	this.unrarCallback = unrarCallback;
 	dataIO = new ComprDataIO(this);
     }
 
