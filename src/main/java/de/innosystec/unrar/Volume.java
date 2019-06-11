@@ -1,32 +1,30 @@
+
 package de.innosystec.unrar;
 
-import de.innosystec.unrar.rarfile.FileHeader;
-import de.innosystec.unrar.unpack.*;
 import java.io.File;
 import java.io.IOException;
+
+import de.innosystec.unrar.rarfile.FileHeader;
+import de.innosystec.unrar.unpack.ComprDataIO;
+
 
 /**
  *
  * @author alban
  */
 public class Volume {
-    
+
     private Volume() {
     }
 
-    public static boolean mergeArchive(Archive archive, ComprDataIO dataIO)
-            throws IOException {
+    public static boolean mergeArchive(Archive archive, ComprDataIO dataIO) throws IOException {
         FileHeader hd = dataIO.getSubHeader();
-        if (hd.getUnpVersion()>=20 &&
-                hd.getFileCRC()!=0xffffffff &&
-                dataIO.getPackedCRC()!=~hd.getFileCRC()) {
+        if (hd.getUnpVersion() >= 20 && hd.getFileCRC() != 0xffffffff && dataIO.getPackedCRC() != ~hd.getFileCRC()) {
             System.err.println("Data Bad CRC");
         }
 
-        boolean oldNumbering = !archive.getMainHeader().isNewNumbering() ||
-                archive.isOldFormat();
-        String nextName = nextVolumeName(archive.getFile().getAbsolutePath(),
-                oldNumbering);
+        boolean oldNumbering = !archive.getMainHeader().isNewNumbering() || archive.isOldFormat();
+        String nextName = nextVolumeName(archive.getFile().getAbsolutePath(), oldNumbering);
         File nextVolume = new File(nextName);
         UnrarCallback callback = archive.getUnrarCallback();
         if ((callback != null) && !callback.isNextVolumeReady(nextVolume)) {
@@ -44,8 +42,7 @@ public class Volume {
         return true;
     }
 
-    public static String nextVolumeName(String arcName,
-            boolean oldNumbering) {
+    public static String nextVolumeName(String arcName, boolean oldNumbering) {
         if (!oldNumbering) {
             // part1.rar, part2.rar, ...
             int len = arcName.length();
@@ -77,8 +74,7 @@ public class Volume {
             buffer.append(digits);
             buffer.append(arcName, index, len);
             return buffer.toString();
-        }
-        else {
+        } else {
             // .rar, .r00, .r01, ...
             int len = arcName.length();
             if ((len <= 4) || (arcName.charAt(len - 4) != '.')) {
@@ -87,11 +83,9 @@ public class Volume {
             StringBuilder buffer = new StringBuilder();
             int off = len - 3;
             buffer.append(arcName, 0, off);
-            if (!isDigit(arcName.charAt(off + 1)) ||
-                    !isDigit(arcName.charAt(off + 2))) {
+            if (!isDigit(arcName.charAt(off + 1)) || !isDigit(arcName.charAt(off + 2))) {
                 buffer.append("r00");
-            }
-            else {
+            } else {
                 char[] ext = new char[3];
                 arcName.getChars(off, len, ext, 0);
                 int i = ext.length - 1;

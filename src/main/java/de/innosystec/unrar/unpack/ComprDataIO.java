@@ -5,17 +5,23 @@
  *
  * Source: $HeadURL$
  * Last changed: $LastChangedDate$
- * 
- * the unrar licence applies to all junrar source and binary distributions 
+ *
+ * the unrar licence applies to all junrar source and binary distributions
  * you are not allowed to use this source to re-create the RAR compression algorithm
- * 
+ *
  * Here some html entities which can be used for escaping javadoc tags:
  * "&":  "&#038;" or "&amp;"
  * "<":  "&#060;" or "&lt;"
  * ">":  "&#062;" or "&gt;"
- * "@":  "&#064;" 
+ * "@":  "&#064;"
  */
+
 package de.innosystec.unrar.unpack;
+
+import java.io.EOFException;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
 
 import de.innosystec.unrar.Archive;
 import de.innosystec.unrar.Volume;
@@ -23,110 +29,103 @@ import de.innosystec.unrar.crc.RarCRC;
 import de.innosystec.unrar.exception.RarException;
 import de.innosystec.unrar.io.ReadOnlyAccessInputStream;
 import de.innosystec.unrar.rarfile.FileHeader;
-import java.io.EOFException;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.OutputStream;
+
 
 /**
  * DOCUMENT ME
- * 
+ *
  * @author $LastChangedBy$
  * @version $LastChangedRevision$
  */
 public class ComprDataIO {
 
-	private final Archive archive;
+    private final Archive archive;
 
-	private long unpPackedSize;
+    private long unpPackedSize;
 
-	private boolean testMode;
+    private boolean testMode;
 
-	private boolean skipUnpCRC;
+    private boolean skipUnpCRC;
 
-	private InputStream inputStream;
+    private InputStream inputStream;
 
-	private OutputStream outputStream;
+    private OutputStream outputStream;
 
+    private FileHeader subHead;
 
-	private FileHeader subHead;
+    // cryptData Crypt;
+    // cryptData Decrypt;
+    private boolean packVolume;
 
-	// cryptData Crypt;
-	// cryptData Decrypt;
-	private boolean packVolume;
+    private boolean unpVolume;
 
-	private boolean unpVolume;
+    private boolean nextVolumeMissing;
 
-	private boolean nextVolumeMissing;
+    private long totalPackRead;
 
-	private long totalPackRead;
+    private long unpArcSize;
 
-	private long unpArcSize;
+    private long curPackRead, curPackWrite, curUnpRead, curUnpWrite;
 
-	private long curPackRead, curPackWrite, curUnpRead, curUnpWrite;
+    private long processedArcSize, totalArcSize;
 
-	private long processedArcSize, totalArcSize;
+    private long packFileCRC, unpFileCRC, packedCRC;
 
-	private long packFileCRC, unpFileCRC, packedCRC;
+    private int encryption;
 
-	private int encryption;
+    private int decryption;
 
-	private int decryption;
+    @SuppressWarnings("unused")
+    private int lastPercent;
 
-	private int lastPercent;
+    @SuppressWarnings("unused")
+    private char currentCommand;
 
-	private char currentCommand;
+    public ComprDataIO(Archive arc) {
+        this.archive = arc;
+    }
 
-	public ComprDataIO(Archive arc) {
-		this.archive = arc;
-	}
+    public void init(OutputStream outputStream) {
+        this.outputStream = outputStream;
+        unpPackedSize = 0;
+        testMode = false;
+        skipUnpCRC = false;
+        packVolume = false;
+        unpVolume = false;
+        nextVolumeMissing = false;
+        // command = null;
+        encryption = 0;
+        decryption = 0;
+        totalPackRead = 0;
+        curPackRead = curPackWrite = curUnpRead = curUnpWrite = 0;
+        packFileCRC = unpFileCRC = packedCRC = 0xffffffff;
+        lastPercent = -1;
+        subHead = null;
 
-	public void init(OutputStream outputStream) {
-		this.outputStream = outputStream;
-		unpPackedSize = 0;
-		testMode = false;
-		skipUnpCRC = false;
-		packVolume = false;
-		unpVolume = false;
-		nextVolumeMissing = false;
-		// command = null;
-		encryption = 0;
-		decryption = 0;
-		totalPackRead = 0;
-		curPackRead = curPackWrite = curUnpRead = curUnpWrite = 0;
-		packFileCRC = unpFileCRC = packedCRC = 0xffffffff;
-		lastPercent = -1;
-		subHead = null;
-
-		currentCommand = 0;
-		processedArcSize = totalArcSize = 0;
-	}
+        currentCommand = 0;
+        processedArcSize = totalArcSize = 0;
+    }
 
     public void init(FileHeader hd) throws IOException {
         long startPos = hd.getPositionInFile() + hd.getHeaderSize();
         unpPackedSize = hd.getFullPackSize();
-        inputStream = new ReadOnlyAccessInputStream(
-                archive.getRof(),
-                startPos,
-                startPos + unpPackedSize);
-		subHead = hd;
+        inputStream = new ReadOnlyAccessInputStream(archive.getRof(), startPos, startPos + unpPackedSize);
+        subHead = hd;
         curUnpRead = 0;
         curPackWrite = 0;
         packedCRC = 0xFFffFFff;
     }
 
-    public int unpRead(byte[] addr, int offset, int count)
-            throws IOException, RarException {
-        int retCode=0, totalRead=0;
+    public int unpRead(byte[] addr, int offset, int count) throws IOException, RarException {
+        int retCode = 0, totalRead = 0;
         while (count > 0) {
-            int readSize = (count > unpPackedSize) ? (int)unpPackedSize : count;
+            int readSize = (count > unpPackedSize) ? (int) unpPackedSize : count;
             retCode = inputStream.read(addr, offset, readSize);
             if (retCode < 0) {
                 throw new EOFException();
             }
-            if (subHead.isSplitAfter()){
-                packedCRC = RarCRC.checkCrc(
-                        (int)packedCRC, addr, offset, retCode);
+            if (subHead.isSplitAfter()) {
+                packedCRC = RarCRC.checkCrc((int) packedCRC, addr, offset, retCode);
             }
 
             curUnpRead += retCode;
@@ -137,11 +136,10 @@ public class ComprDataIO {
             archive.bytesReadRead(retCode);
             if (unpPackedSize == 0 && subHead.isSplitAfter()) {
                 if (!Volume.mergeArchive(archive, this)) {
-                    nextVolumeMissing=true;
+                    nextVolumeMissing = true;
                     return -1;
                 }
-            }
-            else {
+            } else {
                 break;
             }
         }
@@ -151,232 +149,190 @@ public class ComprDataIO {
         }
         return retCode;
 
+    }
 
-	}
+    public void unpWrite(byte[] addr, int offset, int count) throws IOException {
+        if (!testMode) {
+            // DestFile->Write(Addr,Count);
+            outputStream.write(addr, offset, count);
+        }
 
-	public void unpWrite(byte[] addr, int offset, int count)
-            throws IOException {
-		if (!testMode) {
-			// DestFile->Write(Addr,Count);
-			outputStream.write(addr, offset, count);
-		}
+        curUnpWrite += count;
 
-		curUnpWrite += count;
-
-		if (!skipUnpCRC){
-			if (archive.isOldFormat()){
-				unpFileCRC = RarCRC.checkOldCrc(
-                        (short)unpFileCRC, addr, count);
-			}
-			else{
-				unpFileCRC = RarCRC.checkCrc(
-                        (int)unpFileCRC, addr,offset, count);
-			}
-		}
+        if (!skipUnpCRC) {
+            if (archive.isOldFormat()) {
+                unpFileCRC = RarCRC.checkOldCrc((short) unpFileCRC, addr, count);
+            } else {
+                unpFileCRC = RarCRC.checkCrc((int) unpFileCRC, addr, offset, count);
+            }
+        }
 //            if (!skipArcCRC) {
 //                archive.updateDataCRC(Addr, offset, ReadSize);
 //            }
-	}
+    }
 
-	public void setPackedSizeToRead(long size)
-	{
-		unpPackedSize = size;
-	}
+    public void setPackedSizeToRead(long size) {
+        unpPackedSize = size;
+    }
 
-	public void setTestMode(boolean mode)
-	{
-		testMode = mode;
-	}
+    public void setTestMode(boolean mode) {
+        testMode = mode;
+    }
 
-	public void setSkipUnpCRC(boolean skip)
-	{
-		skipUnpCRC = skip;
-	}
+    public void setSkipUnpCRC(boolean skip) {
+        skipUnpCRC = skip;
+    }
 
-	public void setSubHeader(FileHeader hd)
-	{
-		subHead = hd;
+    public void setSubHeader(FileHeader hd) {
+        subHead = hd;
 
-	}
+    }
 
-	public long getCurPackRead()
-	{
-		return curPackRead;
-	}
+    public long getCurPackRead() {
+        return curPackRead;
+    }
 
-	public void setCurPackRead(long curPackRead)
-	{
-		this.curPackRead = curPackRead;
-	}
+    public void setCurPackRead(long curPackRead) {
+        this.curPackRead = curPackRead;
+    }
 
-	public long getCurPackWrite()
-	{
-		return curPackWrite;
-	}
+    public long getCurPackWrite() {
+        return curPackWrite;
+    }
 
-	public void setCurPackWrite(long curPackWrite)
-	{
-		this.curPackWrite = curPackWrite;
-	}
+    public void setCurPackWrite(long curPackWrite) {
+        this.curPackWrite = curPackWrite;
+    }
 
-	public long getCurUnpRead()
-	{
-		return curUnpRead;
-	}
+    public long getCurUnpRead() {
+        return curUnpRead;
+    }
 
-	public void setCurUnpRead(long curUnpRead)
-	{
-		this.curUnpRead = curUnpRead;
-	}
+    public void setCurUnpRead(long curUnpRead) {
+        this.curUnpRead = curUnpRead;
+    }
 
-	public long getCurUnpWrite()
-	{
-		return curUnpWrite;
-	}
+    public long getCurUnpWrite() {
+        return curUnpWrite;
+    }
 
-	public void setCurUnpWrite(long curUnpWrite)
-	{
-		this.curUnpWrite = curUnpWrite;
-	}
+    public void setCurUnpWrite(long curUnpWrite) {
+        this.curUnpWrite = curUnpWrite;
+    }
 
-	public int getDecryption()
-	{
-		return decryption;
-	}
+    public int getDecryption() {
+        return decryption;
+    }
 
-	public void setDecryption(int decryption)
-	{
-		this.decryption = decryption;
-	}
+    public void setDecryption(int decryption) {
+        this.decryption = decryption;
+    }
 
-	public int getEncryption()
-	{
-		return encryption;
-	}
+    public int getEncryption() {
+        return encryption;
+    }
 
-	public void setEncryption(int encryption)
-	{
-		this.encryption = encryption;
-	}
+    public void setEncryption(int encryption) {
+        this.encryption = encryption;
+    }
 
-	public boolean isNextVolumeMissing()
-	{
-		return nextVolumeMissing;
-	}
+    public boolean isNextVolumeMissing() {
+        return nextVolumeMissing;
+    }
 
-	public void setNextVolumeMissing(boolean nextVolumeMissing)
-	{
-		this.nextVolumeMissing = nextVolumeMissing;
-	}
+    public void setNextVolumeMissing(boolean nextVolumeMissing) {
+        this.nextVolumeMissing = nextVolumeMissing;
+    }
 
-	public long getPackedCRC() {
-		return packedCRC;
-	}
+    public long getPackedCRC() {
+        return packedCRC;
+    }
 
     public void setPackedCRC(long packedCRC) {
         this.packedCRC = packedCRC;
     }
 
-	public long getPackFileCRC()
-	{
-		return packFileCRC;
-	}
+    public long getPackFileCRC() {
+        return packFileCRC;
+    }
 
-	public void setPackFileCRC(long packFileCRC)
-	{
-		this.packFileCRC = packFileCRC;
-	}
+    public void setPackFileCRC(long packFileCRC) {
+        this.packFileCRC = packFileCRC;
+    }
 
-	public boolean isPackVolume()
-	{
-		return packVolume;
-	}
+    public boolean isPackVolume() {
+        return packVolume;
+    }
 
-	public void setPackVolume(boolean packVolume)
-	{
-		this.packVolume = packVolume;
-	}
+    public void setPackVolume(boolean packVolume) {
+        this.packVolume = packVolume;
+    }
 
-	public long getProcessedArcSize()
-	{
-		return processedArcSize;
-	}
+    public long getProcessedArcSize() {
+        return processedArcSize;
+    }
 
-	public void setProcessedArcSize(long processedArcSize)
-	{
-		this.processedArcSize = processedArcSize;
-	}
+    public void setProcessedArcSize(long processedArcSize) {
+        this.processedArcSize = processedArcSize;
+    }
 
-	public long getTotalArcSize()
-	{
-		return totalArcSize;
-	}
+    public long getTotalArcSize() {
+        return totalArcSize;
+    }
 
-	public void setTotalArcSize(long totalArcSize)
-	{
-		this.totalArcSize = totalArcSize;
-	}
+    public void setTotalArcSize(long totalArcSize) {
+        this.totalArcSize = totalArcSize;
+    }
 
-	public long getTotalPackRead()
-	{
-		return totalPackRead;
-	}
+    public long getTotalPackRead() {
+        return totalPackRead;
+    }
 
-	public void setTotalPackRead(long totalPackRead)
-	{
-		this.totalPackRead = totalPackRead;
-	}
+    public void setTotalPackRead(long totalPackRead) {
+        this.totalPackRead = totalPackRead;
+    }
 
-	public long getUnpArcSize()
-	{
-		return unpArcSize;
-	}
+    public long getUnpArcSize() {
+        return unpArcSize;
+    }
 
-	public void setUnpArcSize(long unpArcSize)
-	{
-		this.unpArcSize = unpArcSize;
-	}
+    public void setUnpArcSize(long unpArcSize) {
+        this.unpArcSize = unpArcSize;
+    }
 
-	public long getUnpFileCRC()
-	{
-		return unpFileCRC;
-	}
+    public long getUnpFileCRC() {
+        return unpFileCRC;
+    }
 
-	public void setUnpFileCRC(long unpFileCRC)
-	{
-		this.unpFileCRC = unpFileCRC;
-	}
+    public void setUnpFileCRC(long unpFileCRC) {
+        this.unpFileCRC = unpFileCRC;
+    }
 
-	public boolean isUnpVolume()
-	{
-		return unpVolume;
-	}
+    public boolean isUnpVolume() {
+        return unpVolume;
+    }
 
-	public void setUnpVolume(boolean unpVolume)
-	{
-		this.unpVolume = unpVolume;
-	}
+    public void setUnpVolume(boolean unpVolume) {
+        this.unpVolume = unpVolume;
+    }
 
-	public FileHeader getSubHeader()
-	{
-		return subHead;
-	}
+    public FileHeader getSubHeader() {
+        return subHead;
+    }
 
-	
-	
-//	public void setEncryption(int method, char[] Password, byte[] Salt,
-//			boolean encrypt, boolean handsOffHash)
-//	{
+//    public void setEncryption(int method, char[] Password, byte[] Salt,
+//            boolean encrypt, boolean handsOffHash)
+//    {
 //
-//	}
+//    }
 //
-//	public void setAV15Encryption()
-//	{
+//    public void setAV15Encryption()
+//    {
 //
-//	}
+//    }
 //
-//	public void setCmt13Encryption()
-//	{
+//    public void setCmt13Encryption()
+//    {
 //
-//	}
+//    }
 }

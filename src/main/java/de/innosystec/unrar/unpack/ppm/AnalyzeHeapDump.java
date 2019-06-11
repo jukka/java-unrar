@@ -1,3 +1,4 @@
+
 package de.innosystec.unrar.unpack.ppm;
 
 import java.io.BufferedInputStream;
@@ -6,13 +7,14 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 
+
 /**
  * For debugging purposes only.
  *
  * @author alban
  */
 public class AnalyzeHeapDump {
-    
+
     /** Creates a new instance of AnalyzeHeapDump */
     public AnalyzeHeapDump() {
     }
@@ -39,12 +41,10 @@ public class AnalyzeHeapDump {
         long len = Math.min(clen, jlen);
         InputStream cin = null;
         InputStream jin = null;
-        int bufferLen = 256*1024;
+        int bufferLen = 256 * 1024;
         try {
-            cin = new BufferedInputStream(
-                    new FileInputStream(cfile), bufferLen);
-            jin = new BufferedInputStream(
-                    new FileInputStream(jfile), bufferLen);
+            cin = new BufferedInputStream(new FileInputStream(cfile), bufferLen);
+            jin = new BufferedInputStream(new FileInputStream(jfile), bufferLen);
             boolean matching = true;
             boolean mismatchFound = false;
             long startOff = 0L;
@@ -56,8 +56,7 @@ public class AnalyzeHeapDump {
                         matching = false;
                         mismatchFound = true;
                     }
-                }
-                else { // match
+                } else { // match
                     if (!matching) {
                         printMismatch(startOff, off);
                         matching = true;
@@ -72,23 +71,20 @@ public class AnalyzeHeapDump {
                 System.out.println("Files are identical");
             }
             System.out.println("Done");
-        }
-        catch (IOException e) {
+        } catch (IOException e) {
             e.printStackTrace();
-        }
-        finally {
+        } finally {
             try {
-				cin.close();
-				jin.close();
-			} catch (IOException e) {
-				e.printStackTrace();
-			}
+                cin.close();
+                jin.close();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
     }
 
     private static void printMismatch(long startOff, long bytesRead) {
-        System.out.println("Mismatch: off=" + startOff +
-                "(0x" + Long.toHexString(startOff) +
-                "), len=" + (bytesRead - startOff));
+        System.out
+                .println("Mismatch: off=" + startOff + "(0x" + Long.toHexString(startOff) + "), len=" + (bytesRead - startOff));
     }
 }

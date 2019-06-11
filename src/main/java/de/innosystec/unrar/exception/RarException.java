@@ -5,16 +5,17 @@
  *
  * Source: $HeadURL$
  * Last changed: $LastChangedDate$
- * 
- * the unrar licence applies to all junrar source and binary distributions 
+ *
+ * the unrar licence applies to all junrar source and binary distributions
  * you are not allowed to use this source to re-create the RAR compression algorithm
- * 
+ *
  * Here some html entities which can be used for escaping javadoc tags:
  * "&":  "&#038;" or "&amp;"
  * "<":  "&#060;" or "&lt;"
  * ">":  "&#062;" or "&gt;"
- * "@":  "&#064;" 
+ * "@":  "&#064;"
  */
+
 package de.innosystec.unrar.exception;
 
 /**
@@ -23,51 +24,43 @@ package de.innosystec.unrar.exception;
  * @author $LastChangedBy$
  * @version $LastChangedRevision$
  */
-public class RarException extends Exception
-{
-	
-	private RarExceptionType type;
-	
-	public RarException(Exception e){
-		super(RarExceptionType.unkownError.name(),e);
-		this.type = RarExceptionType.unkownError;
-	}
-	
-	public RarException(RarException e)
-	{
-		
-		super(e.getMessage(),e);
-		this.type = e.getType();
-	}
-	
-	public RarException(RarExceptionType type){
-		super(type.name());
-		this.type = type;
-	}
-	
-	
-	
-	public enum RarExceptionType{
-		notImplementedYet,
-		crcError,
-		notRarArchive,
-		badRarArchive,
-		unkownError,
-		headerNotInArchive,
-		wrongHeaderType,
-		ioError,
-		rarEncryptedException ;
-	}
+public class RarException extends Exception {
 
+    private RarExceptionType type;
 
+    public RarException(Exception e) {
+        super(RarExceptionType.unkownError.name(), e);
+        this.type = RarExceptionType.unkownError;
+    }
 
-	public RarExceptionType getType()
-	{
-		return type;
-	}
+    public RarException(RarException e) {
 
-	public void setType(RarExceptionType type)
-	{
-		this.type = type;
-	}
+        super(e.getMessage(), e);
+        this.type = e.getType();
+    }
+
+    public RarException(RarExceptionType type) {
+        super(type.name());
+        this.type = type;
+    }
+
+    public enum RarExceptionType {
+        notImplementedYet,
+        crcError,
+        notRarArchive,
+        badRarArchive,
+        unkownError,
+        headerNotInArchive,
+        wrongHeaderType,
+        ioError,
+        rarEncryptedException;
+    }
+
+    public RarExceptionType getType() {
+        return type;
+    }
+
+    public void setType(RarExceptionType type) {
+        this.type = type;
+    }
 }
