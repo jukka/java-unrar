@@ -223,7 +223,7 @@ public class Archive implements Closeable {
                 break;
             }
 
-            // logger.info("\n--------reading header--------");
+//            logger.info("\n--------reading header--------");
             size = rof.readFully(baseBlockBuffer, BaseBlock.BaseBlockSize);
             if (size == 0) {
                 break;
@@ -240,7 +240,7 @@ public class Archive implements Closeable {
                     throw new RarException(RarException.RarExceptionType.badRarArchive);
                 }
                 headers.add(markHead);
-//        markHead.print();
+//                markHead.print();
                 break;
 
             case MainHeader:
@@ -255,7 +255,7 @@ public class Archive implements Closeable {
                 if (newMhd.isEncrypted()) {
                     throw new RarException(RarExceptionType.rarEncryptedException);
                 }
-//            mainhead.print();
+//                mainhead.print();
                 break;
 
             case SignHeader:
@@ -266,7 +266,7 @@ public class Archive implements Closeable {
                 signHeaderSize = rof.readFully(signBuff, toRead);
                 SignHeader signHead = new SignHeader(block, signBuff);
                 headers.add(signHead);
-                // logger.info("HeaderType: SignHeader");
+//                logger.info("HeaderType: SignHeader");
 
                 break;
 
@@ -278,7 +278,7 @@ public class Archive implements Closeable {
                 avHeaderSize = rof.readFully(avBuff, toRead);
                 AVHeader avHead = new AVHeader(block, avBuff);
                 headers.add(avHead);
-                // logger.info("headertype: AVHeader");
+//                logger.info("headertype: AVHeader");
                 break;
 
             case CommHeader:
@@ -289,8 +289,7 @@ public class Archive implements Closeable {
                 commHeaderSize = rof.readFully(commBuff, toRead);
                 CommentHeader commHead = new CommentHeader(block, commBuff);
                 headers.add(commHead);
-                // logger.info("method: "+commHead.getUnpMethod()+"; 0x"+
-                // Integer.toHexString(commHead.getUnpMethod()));
+//                logger.info("method: " + commHead.getUnpMethod() + "; 0x" + Integer.toHexString(commHead.getUnpMethod()));
                 newpos = commHead.getPositionInFile() + commHead.getHeaderSize();
                 rof.setPosition(newpos);
 
@@ -313,7 +312,7 @@ public class Archive implements Closeable {
                     endArcHead = new EndArcHeader(block, endArchBuff);
 //                    logger.info("HeaderType: endarch\ndatacrc:" + endArcHead.getArchiveDataCRC());
                 } else {
-                    // logger.info("HeaderType: endarch - no Data");
+//                    logger.info("HeaderType: endarch - no Data");
                     endArcHead = new EndArcHeader(block, null);
                 }
                 headers.add(endArcHead);
@@ -414,7 +413,7 @@ public class Archive implements Closeable {
 
                 }
             }
-            // logger.info("\n--------end header--------");
+//            logger.info("\n--------end header--------");
         }
     }
 
@@ -428,12 +427,12 @@ public class Archive implements Closeable {
      *            the outputstream
      * @throws RarException
      */
-    public void extractFile(FileHeader hd, OutputStream os) throws RarException {
-        if (!headers.contains(hd)) {
+    public void extractFile(FileHeader header, OutputStream os) throws RarException {
+        if (!headers.contains(header)) {
             throw new RarException(RarExceptionType.headerNotInArchive);
         }
         try {
-            doExtractFile(hd, os);
+            doExtractFile(header, os);
         } catch (Exception e) {
             if (e instanceof RarException) {
                 throw (RarException) e;
@@ -463,16 +462,16 @@ public class Archive implements Closeable {
             if (actualCRC != expectedCRC) {
                 throw new RarException(RarExceptionType.crcError);
             }
-            // if (!hd.isSplitAfter()) {
-            // // Verify file CRC
-            // if(~dataIO.getUnpFileCRC() != hd.getFileCRC()){
-            // throw new RarException(RarExceptionType.crcError);
-            // }
-            // }
+//            if (!hd.isSplitAfter()) {
+//                // Verify file CRC
+//                if (~dataIO.getUnpFileCRC() != hd.getFileCRC()) {
+//                    throw new RarException(RarExceptionType.crcError);
+//                }
+//            }
         } catch (Exception e) {
             unpack.cleanUp();
             if (e instanceof RarException) {
-                // throw new RarException((RarException)e);
+//                throw new RarException((RarException) e);
                 throw (RarException) e;
             } else {
                 throw new RarException(e);

@@ -54,7 +54,6 @@ public abstract class Pointer {
      * be aware of the byte order
      * 
      * @param pos the position this object should point to
-     * @return true if the address could be set
      */
     public void setAddress(int pos) {
         assert (mem != null);
